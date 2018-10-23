@@ -103,30 +103,8 @@ def load_config(module, commands, commit=False, comment=None):
     connection = get_connection(module)
 
     try:
-        out = connection.edit_config(commands)
+        response = connection.edit_config(commands, commit=commit, comment=comment)
     except ConnectionError as exc:
         module.fail_json(msg=to_text(exc))
 
-    diff = None
-    if module._diff:
-        out = connection.get('compare')
-        out = to_text(out, errors='surrogate_or_strict')
-
-        if not out.startswith('No changes'):
-            out = connection.get('show')
-            diff = to_text(out, errors='surrogate_or_strict').strip()
-
-    if commit:
-        try:
-            out = connection.commit(comment)
-        except ConnectionError:
-            connection.discard_changes()
-            module.fail_json(msg='commit failed: %s' % out)
-
-    if not commit:
-        connection.discard_changes()
-    else:
-        connection.get('exit')
-
-    if diff:
-        return diff
+    return response.get('diff')
